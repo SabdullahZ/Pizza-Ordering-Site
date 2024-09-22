@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask_restful import Api
-from resources import AdminAuth, AddPizza, RemovePizza, GetPizzas, AddToCart, GetPizzasInCart, RemoveFromCart, GetOrders, PlaceOrder
+from resources import AdminAuth, AddPizza, RemovePizza, GetPizzas, AddToCart, GetPizzasInCart, RemoveFromCart, GetOrders, PlaceOrder, AddRider, GetRiders, AssignOrderToRider
 
 # Create a Blueprint for the API
 api_bp = Blueprint('api', __name__)
@@ -18,3 +18,6 @@ api.add_resource(GetPizzasInCart, '/api/cart')   # GET - Get pizzas in cart
 api.add_resource(RemoveFromCart, '/api/removeFromCart')  # POST - Remove pizza from cart
 api.add_resource(GetOrders, '/api/orders')     # GET - Get orders
 api.add_resource(PlaceOrder, '/api/placeOrder')  # POST - Place order
+api.add_resource(AddRider, '/api/addRider')  # POST - Add rider
+api.add_resource(GetRiders, '/api/riders')  # GET - Get all riders
+api.add_resource(AssignOrderToRider, '/api/assignOrder')

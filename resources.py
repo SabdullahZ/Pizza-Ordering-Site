@@ -1,7 +1,8 @@
 import json
 from flask import request, jsonify
-from flask_restful import Resource
-from models import Pizza, Cart, Order, Admin  # Import the Pizza model
+from flask_restful import Resource, reqparse
+from models import Pizza, Cart, Order, Admin, Rider  # Import the Pizza model
+from mongoengine import DoesNotExist
 
 # Resource to handle adding a pizza (Admin)
 class AdminAuth(Resource):
@@ -141,11 +142,13 @@ class GetOrders(Resource):
         response = {
             "orders": [{
                 "total": order.total,
+                "id": str(order.id),
                 "pizzas": [{
                     "id": str(pizza.id),
                     "name": pizza.name,
                     "price": pizza.price
-                } for pizza in order.pizzas]
+                } for pizza in order.pizzas],
+                "rider_name" : order.assigned_rider
             } for order in orders]
         }
         
@@ -181,3 +184,66 @@ class PlaceOrder(Resource):
         }
 
         return jsonify(response)
+
+class AddRider(Resource):
+    def post(self):
+        data = request.get_json()  # Use get_json() for better error handling
+        rider_name = data.get('name')  # Get rider's name from the data
+        
+        if not rider_name:
+            return jsonify({"message": "Rider name is required!"}), 400
+
+        # Create a new rider document
+        rider = Rider(name=rider_name)
+        rider.save()
+
+        # Prepare the response
+        response = {
+            "message": "Rider added successfully!",
+            "id": str(rider.id),
+            "name": rider.name
+        }
+
+        return jsonify(response)
+
+class GetRiders(Resource):
+    def get(self):
+        try:
+            riders = Rider.objects()  # Fetch all riders
+            return {"riders": [{"id": str(rider.id), "name": rider.name} for rider in riders]}, 200
+        except Exception as e:
+            return {"message": str(e)}, 500
+
+
+
+class AssignOrderToRider(Resource):
+    def __init__(self):
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('order_id', type=str, required=True, help='Order ID cannot be blank')
+        self.parser.add_argument('rider_name', type=str, required=True, help='Rider name cannot be blank')
+
+    def post(self):
+        args = self.parser.parse_args()
+        order_id = args['order_id']
+        rider_name = args['rider_name']
+
+        try:
+            # Find the order by ID
+            order = Order.objects.get(id=order_id)
+            # Find the rider by name
+            rider = Rider.objects.get(name=rider_name)
+
+            # Assign the rider to the order
+            order.assigned_rider = rider
+            order.save()
+
+            return {
+                'message': 'Order assigned to rider successfully',
+                'order_id': str(order.id),  # Convert ObjectId to string
+                'rider_name': rider.name
+            }, 200
+
+        except DoesNotExist:
+            return {'message': 'Order or Rider not found'}, 404
+        except Exception as e:
+            return {'message': str(e)}, 500
