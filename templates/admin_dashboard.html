@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="text-center">Admin Dashboard</h1>
+      <div class="d-flex justify-content-end">
+        <a href="/" class="btn btn-secondary mt-5">Home</a>
+      </div>
+
+      <!-- Authentication Form -->
+      <div id="auth-section" class="mb-4">
+        <h3>Login</h3>
+        <form id="auth-form">
+          <div class="mb-3">
+            <label for="adminId" class="form-label">Admin ID</label>
+            <input type="text" id="adminId" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label for="adminPassword" class="form-label">Password</label>
+            <input
+              type="password"
+              id="adminPassword"
+              class="form-control"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+      </div>
+
+      <!-- Pizza List -->
+      <div id="pizza-list" class="mb-4">
+        <h3>All Pizzas</h3>
+        <div class="row" id="pizzas"></div>
+      </div>
+
+      <!-- Add Pizza Form -->
+      <div id="add-pizza-section" style="display: none">
+        <h3>Add New Pizza</h3>
+        <form id="add-pizza-form">
+          <div class="mb-3">
+            <label for="pizzaName" class="form-label">Pizza Name</label>
+            <input type="text" id="pizzaName" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label for="pizzaDescription" class="form-label">Description</label>
+            <input
+              type="text"
+              id="pizzaDescription"
+              class="form-control"
+              required
+            />
+          </div>
+          <div class="mb-3">
+            <label for="pizzaPrice" class="form-label">Price</label>
+            <input
+              type="number"
+              id="pizzaPrice"
+              class="form-control"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-success">Add Pizza</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Fetch and display all pizzas
+      function fetchPizzas() {
+        fetch("/api/pizzas")
+          .then((response) => response.json())
+          .then((data) => {
+            const pizzasContainer = document.getElementById("pizzas");
+            pizzasContainer.innerHTML = ""; // Clear existing pizzas
+            data.pizzas.forEach((pizza) => {
+              pizzasContainer.innerHTML += `
+                            <div class="col-md-4">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${pizza.name}</h5>
+                                        <p class="card-text">${pizza.description}</p>
+                                        <p class="card-text">$${pizza.price}</p>
+                                        <button class="btn btn-danger" onclick="removePizza('${pizza.id}')">Delete</button>
+                                    </div>
+                                </div>
+                            </div>`;
+            });
+          })
+          .catch((error) => console.error("Error fetching pizzas:", error));
+      }
+
+      // Handle authentication form submission
+      document
+        .getElementById("auth-form")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const adminId = document.getElementById("adminId").value;
+          const adminPassword = document.getElementById("adminPassword").value;
+
+          fetch("/api/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: adminId,
+              password: adminPassword,
+            }),
+          })
+            .then((response) => {
+              if (response.status === 200) {
+                document.getElementById("auth-section").style.display = "none";
+                document.getElementById("add-pizza-section").style.display =
+                  "block";
+                fetchPizzas(); // Fetch pizzas after successful login
+              } else if (response.status === 403) {
+                alert("Invalid ID or Password");
+              } else {
+                alert("An unknown error occurred");
+              }
+            })
+            .catch((error) => {
+              console.error("Error logging in:", error);
+              alert("An error occurred during login.");
+            });
+        });
+
+      // Handle add pizza form submission
+      document
+        .getElementById("add-pizza-form")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const pizzaName = document.getElementById("pizzaName").value;
+          const pizzaDescription =
+            document.getElementById("pizzaDescription").value;
+          const pizzaPrice = parseFloat(
+            document.getElementById("pizzaPrice").value
+          );
+
+          fetch("/api/addPizza", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: pizzaName,
+              description: pizzaDescription,
+              price: pizzaPrice,
+            }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Failed to add pizza");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              alert("Pizza added successfully!");
+              document.getElementById("add-pizza-form").reset(); // Reset form
+              fetchPizzas(); // Refresh pizza list
+            })
+            .catch((error) => console.error("Error adding pizza:", error));
+        });
+
+      // Remove pizza
+      function removePizza(pizzaId) {
+        fetch("/api/removePizza", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pizza_id: pizzaId }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              alert("Pizza removed successfully!");
+              fetchPizzas(); // Refresh pizza list
+            } else {
+              alert("Failed to remove pizza");
+            }
+          })
+          .catch((error) => console.error("Error removing pizza:", error));
+      }
+    </script>
+  </body>
+</html>

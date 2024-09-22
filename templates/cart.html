@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shopping Cart</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Your Cart</h1>
+      <div class="row" id="cart-items">
+        <!-- Cart items will be displayed here -->
+        <p id="removeIfNotEmpty" class="text-center mt-5" style="color: red">
+          Your cart is empty
+        </p>
+      </div>
+      <div
+        class="text-center mt-3 font-italic"
+        style="font-size: xx-large; font-weight: bolder"
+      >
+        Total: $<span id="total">0</span>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <button
+          onclick="window.location.href = '/'"
+          class="btn btn-secondary mt-3"
+        >
+          Home
+        </button>
+        <button
+          onclick="window.location.href = '/menu'"
+          class="btn btn-primary mt-3"
+        >
+          Show Menu
+        </button>
+        <button
+          id="placeOrderButton"
+          onclick="placeOrder()"
+          class="btn btn-success mt-3"
+          disabled
+        >
+          Checkout/Place Order
+        </button>
+      </div>
+    </div>
+
+    <script>
+      fetch("/api/cart")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const cartItemsContainer = document.getElementById("cart-items");
+          const placeOrderButton = document.getElementById("placeOrderButton");
+          if (data.items && data.items.length > 0) {
+            document.getElementById("removeIfNotEmpty").style.opacity = "0";
+            data.items.forEach((pizza) => {
+              cartItemsContainer.innerHTML += `
+          <div class="col-md-4">
+            <div class="card mb-4">
+              <div class="card-body">
+                <h5 class="card-title">${pizza.name}</h5>
+                <p class="card-text">${pizza.description}</p>
+                <p class="card-text">$${pizza.price}</p>
+                <button class="btn btn-danger" onclick="removeFromCart('${pizza.id}')">Remove from Cart</button>
+                <button class="btn btn-primary" onclick="addToCart('${pizza.id}')">Add Another</button>
+              </div>
+            </div>
+          </div>`;
+            });
+
+            const totalElement = document.getElementById("total");
+            totalElement.innerHTML = data.total;
+            placeOrderButton.disabled = false; // Enable the button when there are items
+          } else {
+            cartItemsContainer.innerHTML = `<p id="removeIfNotEmpty" class="text-center mt-5" style="color: red">Your cart is empty!</p>`;
+            placeOrderButton.disabled = true; // Disable the button when the cart is empty
+          }
+        })
+        .catch((error) => console.error("Error fetching cart items:", error));
+
+      function removeFromCart(pizzaId) {
+        console.log("Removing pizza from cart:", pizzaId);
+        fetch("/api/removeFromCart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pizza_id: pizzaId }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error("Failed to remove pizza from cart");
+          })
+          .then((data) => {
+            console.log(data.message);
+            location.reload();
+          })
+          .catch((error) =>
+            console.error("Error removing pizza from cart:", error)
+          );
+      }
+
+      function addToCart(pizzaId) {
+        fetch("/api/addToCart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pizza_ids: [pizzaId] }),
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            }
+            alert("Failed to add pizza to cart");
+            throw new Error("Failed to add pizza to cart");
+          })
+          .then((data) => {
+            console.log(data.message);
+            location.reload();
+          })
+          .catch((error) => {
+            alert("Failed to add pizza to cart");
+            console.error("Error adding pizza to cart:", error);
+          });
+      }
+
+      function placeOrder() {
+        fetch("/api/placeOrder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            }
+            alert("Failed to place order");
+            throw new Error("Failed to place order");
+          })
+          .then((data) => {
+            console.log(data.message);
+            location.href = "/";
+          })
+          .catch((error) => {
+            alert("Failed to place order");
+            console.error("Error placing order:", error);
+          });
+      }
+    </script>
+  </body>
+</html>
